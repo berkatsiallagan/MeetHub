@@ -74,8 +74,32 @@ Admin
 
 3.1 Functional Requirements
 
-FR-01 User Authentication
-	•	Sistem harus menyediakan login dan role (user/admin).
+FR-01 User Authentication & Authorization
+
+Priority: HIGH
+
+Authentication Methods (Prioritas berurutan):
+	1.	Login with Google (OAuth 2.0) - PRIORITY TINGGI
+	•	User dapat login menggunakan akun Google mereka
+	•	Otomatis membuat akun baru jika belum terdaftar (auto-registration)
+	•	Mengambil data: email, name, profile picture dari Google
+	•	Default role: user (admin assignment manual via database/seeder)
+	2.	Traditional Registration & Login - PRIORITY MEDIUM
+	•	Fallback option jika user tidak ingin menggunakan Google
+	•	Registration form: name, email, password, password_confirmation
+	•	Login form: email, password
+	•	Email verification (opsional, recommended)
+
+Role Management:
+	•	Sistem memiliki 2 role: user dan admin
+	•	Default role untuk registrasi baru: user
+	•	Admin role di-assign manual oleh super admin atau via database seeder
+
+Session & Security:
+	•	Session-based authentication menggunakan Laravel Sanctum/Fortify
+	•	Remember me functionality
+	•	Logout dari semua device (opsional)
+	•	Password reset via email (untuk traditional login)
 
 FR-02 Room Management
 	•	Admin dapat membuat room, dengan atribut:
@@ -149,6 +173,9 @@ User → Controller → BookingService → Repository → DB
 
 Tables:
 	1.	users
+	•	id, name, email, email_verified_at, password (nullable untuk Google login), 
+	•	google_id (nullable), avatar (nullable), role (enum: user/admin), 
+	•	remember_token, created_at, updated_at
 	2.	rooms
 	3.	bookings
 	4.	logs (opsional)
@@ -315,7 +342,35 @@ Images & Assets
 6. SECURITY SPECIFICATION
 
 6.1 Authentication
-	•	Laravel Authentication (Fortify/Passport/Sanctum).
+
+Implementation Stack:
+	•	Laravel Sanctum - untuk session-based authentication
+	•	Laravel Socialite - untuk Google OAuth integration
+	•	Laravel Fortify (opsional) - untuk traditional login/register features
+
+Google OAuth Flow:
+	1.	User klik "Login with Google"
+	2.	Redirect ke Google OAuth consent screen
+	3.	User authorize aplikasi
+	4.	Google redirect kembali dengan authorization code
+	5.	Backend exchange code untuk access token
+	6.	Retrieve user info dari Google API
+	7.	Check apakah email sudah terdaftar:
+	•	Jika ya: login user tersebut
+	•	Jika tidak: buat user baru dengan data dari Google
+	8.	Create session dan redirect ke dashboard
+
+Traditional Login Flow:
+	1.	User input email & password
+	2.	Validate credentials
+	3.	Check email verification status (jika diaktifkan)
+	4.	Create session dan redirect ke dashboard
+
+Security Measures:
+	•	Google OAuth: validate state parameter untuk CSRF protection
+	•	Password: minimum 8 karakter, hashed dengan bcrypt
+	•	Rate limiting: 5 login attempts per minute per IP
+	•	Session timeout: 2 jam inactivity (configurable)
 
 6.2 Authorization
 	•	Policies:
@@ -408,6 +463,9 @@ Double-layer:
 	•	Integrasi kalender Google.
 	•	Notifikasi email/WhatsApp.
 	•	Export laporan penggunaan ruangan.
+	•	Social login tambahan (Microsoft, GitHub).
+	•	Two-factor authentication (2FA).
+	•	Single Sign-On (SSO) untuk enterprise.
 
 ⸻
 
